@@ -116,8 +116,7 @@ async function saveSettings() {
             trackingEnabled: document.getElementById('tracking-enabled')?.checked !== false,
             dataRetentionDays: parseInt(document.getElementById('data-retention')?.value) || 90,
             privacy: {
-                trackIncognito: document.getElementById('track-incognito')?.checked || false,
-                trackPrivateBrowsing: document.getElementById('track-incognito')?.checked || false
+                trackIncognito: document.getElementById('track-incognito')?.checked || false
             },
             categories: getCategoriesFromForm()
         };
@@ -180,8 +179,7 @@ async function resetSettings() {
             trackingEnabled: true,
             dataRetentionDays: 90,
             privacy: {
-                trackIncognito: false,
-                trackPrivateBrowsing: false
+                trackIncognito: false
             },
             categories: {
                 work: [],
