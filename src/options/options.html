@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Time Tracking - Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div id="root">
+        <div class="options-container">
+            <header class="options-header">
+                <h1>Browser Time Tracking Settings</h1>
+                <p>Configure your time tracking preferences and data management options.</p>
+            </header>
+            
+            <main class="options-main">
+                <section class="settings-section">
+                    <h2>Tracking Settings</h2>
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="tracking-enabled" class="setting-checkbox">
+                            <span class="setting-text">Enable time tracking</span>
+                        </label>
+                        <p class="setting-description">Track time spent on websites automatically</p>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="track-incognito" class="setting-checkbox">
+                            <span class="setting-text">Track incognito/private browsing</span>
+                        </label>
+                        <p class="setting-description">Include private browsing sessions in tracking</p>
+                    </div>
+                </section>
+                
+                <section class="settings-section">
+                    <h2>Data Management</h2>
+                    <div class="setting-item">
+                        <label for="data-retention" class="setting-label">Data retention period</label>
+                        <select id="data-retention" class="setting-select">
+                            <option value="30">30 days</option>
+                            <option value="60">60 days</option>
+                            <option value="90" selected>90 days</option>
+                            <option value="180">180 days</option>
+                            <option value="365">1 year</option>
+                        </select>
+                        <p class="setting-description">How long to keep tracking data</p>
+                    </div>
+                </section>
+                
+                <section class="settings-section">
+                    <h2>Categories</h2>
+                    <div class="categories-container">
+                        <div class="category-item">
+                            <h3>Work</h3>
+                            <input type="text" id="work-domains" class="domain-input" placeholder="github.com, stackoverflow.com">
+                        </div>
+                        <div class="category-item">
+                            <h3>Entertainment</h3>
+                            <input type="text" id="entertainment-domains" class="domain-input" placeholder="youtube.com, netflix.com">
+                        </div>
+                        <div class="category-item">
+                            <h3>Social</h3>
+                            <input type="text" id="social-domains" class="domain-input" placeholder="facebook.com, twitter.com">
+                        </div>
+                        <div class="category-item">
+                            <h3>News</h3>
+                            <input type="text" id="news-domains" class="domain-input" placeholder="cnn.com, bbc.com">
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="settings-section">
+                    <h2>Export & Import</h2>
+                    <div class="export-import-container">
+                        <button id="export-data" class="btn btn-primary">Export Data (CSV)</button>
+                        <button id="export-json" class="btn btn-secondary">Export Data (JSON)</button>
+                        <button id="clear-data" class="btn btn-danger">Clear All Data</button>
+                    </div>
+                </section>
+            </main>
+            
+            <footer class="options-footer">
+                <button id="save-settings" class="btn btn-primary">Save Settings</button>
+                <button id="reset-settings" class="btn btn-secondary">Reset to Defaults</button>
+            </footer>
+        </div>
+    </div>
+    
+    <script type="module" src="options.js"></script>
+</body>
+</html>
