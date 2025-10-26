@@ -38,6 +38,9 @@ function setupEventListeners() {
     // Track tab updates (URL changes, page loads)
     chrome.tabs.onUpdated.addListener(handleTabUpdate);
     
+    // Track tab removal (when tabs are closed)
+    chrome.tabs.onRemoved.addListener(handleTabRemoved);
+    
     // Track window focus changes
     chrome.windows.onFocusChanged.addListener(handleWindowFocusChange);
     
@@ -94,6 +97,38 @@ async function handleTabUpdate(tabId, changeInfo, _tab) {
         }
     } catch (error) {
         console.error('Error handling tab update:', error);
+    }
+}
+
+/**
+ * Handle tab removal (when tabs are closed)
+ * @param {number} tabId - Tab ID that was removed
+ * @param {object} removeInfo - Information about the tab removal
+ */
+async function handleTabRemoved(tabId, removeInfo) {
+    try {
+        // If the closed tab was the one we were tracking, record time and clear tracking
+        if (tabId === currentActiveTab) {
+            if (trackingStartTime) {
+                await recordTimeSpent(tabId, trackingStartTime);
+            }
+            
+            // Clear current tracking
+            currentActiveTab = null;
+            trackingStartTime = null;
+            
+            console.log(`Tab ${tabId} was closed, cleared tracking`);
+            
+            // Try to find a new active tab to track
+            const activeTab = await getActiveTab();
+            if (activeTab) {
+                currentActiveTab = activeTab.id;
+                trackingStartTime = Date.now();
+                console.log(`Started tracking new active tab: ${activeTab.id}`);
+            }
+        }
+    } catch (error) {
+        console.error('Error handling tab removal:', error);
     }
 }
 
@@ -192,7 +227,15 @@ async function recordTimeSpent(tabId, startTime) {
         if (timeSpent < 1) return; // Ignore very short sessions
         
         // Get tab information
-        const tab = await chrome.tabs.get(tabId);
+        let tab;
+        try {
+            tab = await chrome.tabs.get(tabId);
+        } catch (error) {
+            // Tab was closed or doesn't exist anymore
+            console.log(`Tab ${tabId} no longer exists, skipping time recording`);
+            return;
+        }
+        
         if (!tab || !tab.url) return;
         
         // Skip chrome:// and extension:// URLs
@@ -234,6 +277,11 @@ async function recordTimeSpent(tabId, startTime) {
         await chrome.storage.local.set({ [sessionKey]: sessionData });
         
         console.log(`Recorded ${timeSpent}s on ${domain}`);
+        console.log('Updated session data:', sessionData);
+        
+        // Verify data was saved
+        const verifyResult = await chrome.storage.local.get([sessionKey]);
+        console.log('Verified saved data:', verifyResult);
         
     } catch (error) {
         console.error('Error recording time spent:', error);

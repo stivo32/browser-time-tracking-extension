@@ -51,14 +51,21 @@ async function loadCurrentStats() {
     try {
         // Get today's date for data retrieval
         const today = new Date().toISOString().split('T')[0];
+        console.log('Loading stats for date:', today);
         
         // Get stored data
         const result = await chrome.storage.local.get([`session_${today}`]);
+        console.log('Storage result:', result);
+        
         const todaySession = result[`session_${today}`] || { domains: {} };
+        console.log('Today session data:', todaySession);
         
         // Calculate today's total time
         const totalTime = calculateTotalTime(todaySession.domains);
         const activeSites = Object.keys(todaySession.domains).length;
+        
+        console.log('Calculated total time:', totalTime, 'seconds');
+        console.log('Active sites:', activeSites);
         
         // Update UI
         updateTodayTime(totalTime);

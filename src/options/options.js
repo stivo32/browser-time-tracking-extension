@@ -1,7 +1,8 @@
 /**
- * Browser Time Tracking Extension - Options Page Script
+ * Browser Time Tracking Extension - Options Script
  * 
- * Handles settings management, data export/import, and configuration options.
+ * Settings page for configuring extension preferences
+ * and viewing detailed statistics.
  */
 
 /**
@@ -15,39 +16,31 @@ function initializeOptions() {
     
     // Load current settings
     loadSettings();
+    
+    // Load and display statistics
+    loadStatistics();
 }
 
 /**
  * Set up event listeners for options page
  */
 function setupEventListeners() {
-    // Save settings button
-    const saveBtn = document.getElementById('save-settings');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', saveSettings);
+    // Tracking enabled checkbox
+    const trackingCheckbox = document.getElementById('tracking-enabled');
+    if (trackingCheckbox) {
+        trackingCheckbox.addEventListener('change', handleTrackingToggle);
     }
     
-    // Reset settings button
-    const resetBtn = document.getElementById('reset-settings');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetSettings);
-    }
-    
-    // Export buttons
-    const exportCsvBtn = document.getElementById('export-data');
-    if (exportCsvBtn) {
-        exportCsvBtn.addEventListener('click', () => exportData('csv'));
-    }
-    
-    const exportJsonBtn = document.getElementById('export-json');
-    if (exportJsonBtn) {
-        exportJsonBtn.addEventListener('click', () => exportData('json'));
+    // Export data button
+    const exportBtn = document.getElementById('export-data');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', handleExportData);
     }
     
     // Clear data button
     const clearBtn = document.getElementById('clear-data');
     if (clearBtn) {
-        clearBtn.addEventListener('click', clearAllData);
+        clearBtn.addEventListener('click', handleClearData);
     }
 }
 
@@ -59,293 +52,229 @@ async function loadSettings() {
         const result = await chrome.storage.local.get(['settings']);
         const settings = result.settings || {};
         
-        // Load tracking settings
-        const trackingEnabled = document.getElementById('tracking-enabled');
-        if (trackingEnabled) {
-            trackingEnabled.checked = settings.trackingEnabled !== false;
+        const trackingCheckbox = document.getElementById('tracking-enabled');
+        if (trackingCheckbox) {
+            trackingCheckbox.checked = settings.trackingEnabled !== false; // Default to true
         }
         
-        const trackIncognito = document.getElementById('track-incognito');
-        if (trackIncognito) {
-            trackIncognito.checked = settings.privacy?.trackIncognito || false;
-        }
-        
-        // Load data retention
-        const dataRetention = document.getElementById('data-retention');
-        if (dataRetention) {
-            dataRetention.value = settings.dataRetentionDays || 90;
-        }
-        
-        // Load categories
-        loadCategories(settings.categories || {});
-        
-        console.log('Settings loaded successfully');
     } catch (error) {
         console.error('Error loading settings:', error);
-        showMessage('Failed to load settings', 'error');
     }
 }
 
 /**
- * Load category settings
- * @param {Object} categories - Category settings
+ * Handle tracking toggle
  */
-function loadCategories(categories) {
-    const categoryFields = {
-        work: 'work-domains',
-        entertainment: 'entertainment-domains',
-        social: 'social-domains',
-        news: 'news-domains'
-    };
-    
-    Object.entries(categoryFields).forEach(([category, fieldId]) => {
-        const field = document.getElementById(fieldId);
-        if (field && categories[category]) {
-            field.value = categories[category].join(', ');
-        }
-    });
-}
-
-/**
- * Save settings to storage
- */
-async function saveSettings() {
+async function handleTrackingToggle(event) {
     try {
-        // Collect form data
-        const settings = {
-            trackingEnabled: document.getElementById('tracking-enabled')?.checked !== false,
-            dataRetentionDays: parseInt(document.getElementById('data-retention')?.value) || 90,
-            privacy: {
-                trackIncognito: document.getElementById('track-incognito')?.checked || false
-            },
-            categories: getCategoriesFromForm()
-        };
+        const isEnabled = event.target.checked;
         
-        // Save to storage
+        const result = await chrome.storage.local.get(['settings']);
+        const settings = result.settings || {};
+        settings.trackingEnabled = isEnabled;
+        
         await chrome.storage.local.set({ settings });
         
-        // Notify background script
-        chrome.runtime.sendMessage({
-            type: 'SETTINGS_UPDATED',
-            settings
-        });
+        console.log('Tracking enabled:', isEnabled);
         
-        showMessage('Settings saved successfully', 'success');
-        console.log('Settings saved:', settings);
     } catch (error) {
-        console.error('Error saving settings:', error);
-        showMessage('Failed to save settings', 'error');
+        console.error('Error updating tracking setting:', error);
     }
 }
 
 /**
- * Get categories from form inputs
- * @returns {Object} Categories object
+ * Load and display statistics
  */
-function getCategoriesFromForm() {
-    const categoryFields = {
-        work: 'work-domains',
-        entertainment: 'entertainment-domains',
-        social: 'social-domains',
-        news: 'news-domains'
-    };
-    
-    const categories = {};
-    
-    Object.entries(categoryFields).forEach(([category, fieldId]) => {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            const domains = field.value
-                .split(',')
-                .map(domain => domain.trim())
-                .filter(domain => domain.length > 0);
-            categories[category] = domains;
-        }
-    });
-    
-    return categories;
-}
-
-/**
- * Reset settings to defaults
- */
-async function resetSettings() {
-    if (!confirm('Are you sure you want to reset all settings to defaults?')) {
-        return;
-    }
-    
+async function loadStatistics() {
     try {
-        const defaultSettings = {
-            trackingEnabled: true,
-            dataRetentionDays: 90,
-            privacy: {
-                trackIncognito: false
-            },
-            categories: {
-                work: [],
-                entertainment: [],
-                social: [],
-                news: []
-            }
-        };
+        const statsDisplay = document.getElementById('stats-display');
+        if (!statsDisplay) return;
         
-        await chrome.storage.local.set({ settings: defaultSettings });
-        
-        // Reload the page to reflect changes
-        location.reload();
-    } catch (error) {
-        console.error('Error resetting settings:', error);
-        showMessage('Failed to reset settings', 'error');
-    }
-}
-
-/**
- * Export data in specified format
- * @param {string} format - Export format ('csv' or 'json')
- */
-async function exportData(format) {
-    try {
         // Get all session data
-        const allData = await chrome.storage.local.get();
-        const sessionKeys = Object.keys(allData).filter(key => key.startsWith('session_'));
+        const result = await chrome.storage.local.get(null);
+        const sessions = Object.keys(result)
+            .filter(key => key.startsWith('session_'))
+            .reduce((acc, key) => {
+                acc[key] = result[key];
+                return acc;
+            }, {});
         
-        if (sessionKeys.length === 0) {
-            showMessage('No data to export', 'warning');
+        if (Object.keys(sessions).length === 0) {
+            statsDisplay.innerHTML = '<p>No data available yet. Start browsing to see your statistics!</p>';
             return;
         }
         
-        const exportData = {};
-        sessionKeys.forEach(key => {
-            exportData[key] = allData[key];
-        });
+        // Calculate total statistics
+        const totalStats = calculateTotalStatistics(sessions);
         
-        if (format === 'csv') {
-            exportToCsv(exportData);
-        } else if (format === 'json') {
-            exportToJson(exportData);
-        }
+        // Display statistics
+        displayStatistics(totalStats, sessions);
         
-        showMessage(`Data exported as ${format.toUpperCase()}`, 'success');
     } catch (error) {
-        console.error('Error exporting data:', error);
-        showMessage('Failed to export data', 'error');
+        console.error('Error loading statistics:', error);
+        const statsDisplay = document.getElementById('stats-display');
+        if (statsDisplay) {
+            statsDisplay.innerHTML = '<p style="color: #dc3545;">Error loading statistics</p>';
+        }
     }
 }
 
 /**
- * Export data as CSV
- * @param {Object} data - Data to export
+ * Calculate total statistics from all sessions
  */
-function exportToCsv(data) {
-    const csvRows = ['Date,Domain,Total Time (seconds),Pages'];
+function calculateTotalStatistics(sessions) {
+    const totalTime = Object.values(sessions).reduce((total, session) => {
+        return total + Object.values(session.domains || {}).reduce((sessionTotal, domain) => {
+            return sessionTotal + (domain.totalTime || 0);
+        }, 0);
+    }, 0);
     
-    Object.entries(data).forEach(([sessionKey, sessionData]) => {
-        const date = sessionKey.replace('session_', '');
-        
-        Object.entries(sessionData.domains || {}).forEach(([domain, domainData]) => {
-            csvRows.push(`${date},${domain},${domainData.totalTime || 0},"${Object.keys(domainData.pages || {}).join(';')}"`);
+    const totalSites = new Set();
+    Object.values(sessions).forEach(session => {
+        Object.keys(session.domains || {}).forEach(domain => {
+            totalSites.add(domain);
         });
     });
     
-    const csvContent = csvRows.join('\n');
-    downloadFile(csvContent, 'browser-time-tracking.csv', 'text/csv');
-}
-
-/**
- * Export data as JSON
- * @param {Object} data - Data to export
- */
-function exportToJson(data) {
-    const jsonContent = JSON.stringify(data, null, 2);
-    downloadFile(jsonContent, 'browser-time-tracking.json', 'application/json');
-}
-
-/**
- * Download file with specified content
- * @param {string} content - File content
- * @param {string} filename - File name
- * @param {string} mimeType - MIME type
- */
-function downloadFile(content, filename, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
+    const totalSessions = Object.keys(sessions).length;
     
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    return {
+        totalTime,
+        totalSites: totalSites.size,
+        totalSessions
+    };
 }
 
 /**
- * Clear all tracking data
+ * Display statistics in the UI
  */
-async function clearAllData() {
-    if (!confirm('Are you sure you want to clear ALL tracking data? This action cannot be undone.')) {
+function displayStatistics(totalStats, sessions) {
+    const statsDisplay = document.getElementById('stats-display');
+    
+    const hours = Math.floor(totalStats.totalTime / 3600);
+    const minutes = Math.floor((totalStats.totalTime % 3600) / 60);
+    
+    statsDisplay.innerHTML = `
+        <h3>Overall Statistics</h3>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <h3>Total Time</h3>
+                <div class="value">${hours}h ${minutes}m</div>
+            </div>
+            <div class="stat-item">
+                <h3>Unique Sites</h3>
+                <div class="value">${totalStats.totalSites}</div>
+            </div>
+            <div class="stat-item">
+                <h3>Tracking Days</h3>
+                <div class="value">${totalStats.totalSessions}</div>
+            </div>
+        </div>
+        <div class="domain-list">
+            <h3>Top Sites (All Time)</h3>
+            ${generateTopSitesList(sessions)}
+        </div>
+    `;
+}
+
+/**
+ * Generate top sites list
+ */
+function generateTopSitesList(sessions) {
+    const domainStats = {};
+    
+    // Aggregate domain data across all sessions
+    Object.values(sessions).forEach(session => {
+        Object.entries(session.domains || {}).forEach(([domain, data]) => {
+            if (!domainStats[domain]) {
+                domainStats[domain] = 0;
+            }
+            domainStats[domain] += data.totalTime || 0;
+        });
+    });
+    
+    // Sort by time spent
+    const sortedDomains = Object.entries(domainStats)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10); // Top 10
+    
+    if (sortedDomains.length === 0) {
+        return '<p>No data available</p>';
+    }
+    
+    return sortedDomains.map(([domain, time]) => {
+        const hours = Math.floor(time / 3600);
+        const minutes = Math.floor((time % 3600) / 60);
+        const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        
+        return `
+            <div class="domain-item">
+                <span class="domain-name">${domain}</span>
+                <span class="domain-time">${timeStr}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Handle export data
+ */
+async function handleExportData() {
+    try {
+        const result = await chrome.storage.local.get(null);
+        const sessions = Object.keys(result)
+            .filter(key => key.startsWith('session_'))
+            .reduce((acc, key) => {
+                acc[key] = result[key];
+                return acc;
+            }, {});
+        
+        const dataStr = JSON.stringify(sessions, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `browser-time-tracking-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        console.log('Data exported successfully');
+        
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        alert('Error exporting data');
+    }
+}
+
+/**
+ * Handle clear data
+ */
+async function handleClearData() {
+    if (!confirm('Are you sure you want to clear all tracking data? This action cannot be undone.')) {
         return;
     }
     
     try {
-        // Get all session keys
-        const allData = await chrome.storage.local.get();
-        const sessionKeys = Object.keys(allData).filter(key => key.startsWith('session_'));
+        // Get all keys
+        const result = await chrome.storage.local.get(null);
+        const sessionKeys = Object.keys(result).filter(key => key.startsWith('session_'));
         
-        // Remove all session data
+        // Remove session data
         await chrome.storage.local.remove(sessionKeys);
         
-        showMessage('All tracking data cleared', 'success');
-        console.log('All tracking data cleared');
+        // Reload statistics
+        loadStatistics();
+        
+        console.log('Data cleared successfully');
+        alert('All tracking data has been cleared');
+        
     } catch (error) {
         console.error('Error clearing data:', error);
-        showMessage('Failed to clear data', 'error');
+        alert('Error clearing data');
     }
-}
-
-/**
- * Show message to user
- * @param {string} message - Message text
- * @param {string} type - Message type ('success', 'error', 'warning')
- */
-function showMessage(message, type = 'info') {
-    // Remove existing messages
-    const existingMessages = document.querySelectorAll('.message');
-    existingMessages.forEach(msg => msg.remove());
-    
-    // Create new message
-    const messageEl = document.createElement('div');
-    messageEl.className = `message message-${type}`;
-    messageEl.textContent = message;
-    messageEl.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 12px 20px;
-        border-radius: 6px;
-        color: white;
-        font-weight: 500;
-        z-index: 1000;
-        animation: slideIn 0.3s ease;
-    `;
-    
-    // Set background color based on type
-    const colors = {
-        success: '#27ae60',
-        error: '#e74c3c',
-        warning: '#f39c12',
-        info: '#3498db'
-    };
-    messageEl.style.backgroundColor = colors[type] || colors.info;
-    
-    document.body.appendChild(messageEl);
-    
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        if (messageEl.parentNode) {
-            messageEl.remove();
-        }
-    }, 3000);
 }
 
 // Initialize options page when DOM is loaded

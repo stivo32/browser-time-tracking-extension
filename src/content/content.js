@@ -1,61 +1,76 @@
 /**
  * Browser Time Tracking Extension - Content Script
  * 
- * Injected into web pages to collect metadata and handle SPA navigation.
- * Runs in the context of web pages to gather additional information.
+ * Injected into web pages to track user activity
+ * and send data to background script.
  */
+
+// Wrap everything in a try-catch to prevent any errors
+try {
+    // Early exit if Chrome API is not available
+    (function() {
+        'use strict';
+        
+        // Check if we're in a valid environment for Chrome extension
+        if (typeof window === 'undefined' || !window.chrome || !window.chrome.runtime) {
+            console.debug('Chrome extension environment not available, skipping content script');
+            return;
+        }
+        
+        // Check if we're on a valid page
+        const url = window.location.href;
+        if (url.startsWith('chrome://') || 
+            url.startsWith('chrome-extension://') || 
+            url.startsWith('moz-extension://') ||
+            url.startsWith('edge://') ||
+            url.startsWith('about:')) {
+            console.debug('Skipping content script on special page:', url);
+            return;
+        }
+        
+        // If we get here, it's safe to initialize
+        initializeContentScript();
+    })();
+} catch (error) {
+    console.debug('Content script error (safe to ignore):', error.message);
+}
 
 /**
  * Initialize content script
  */
 function initializeContentScript() {
-    console.log('Browser Time Tracking content script loaded');
+    console.log('Browser Time Tracking content script loaded on:', window.location.href);
     
     // Set up event listeners
     setupEventListeners();
     
-    // Collect initial page metadata
-    collectPageMetadata();
+    // Send page load notification to background
+    notifyBackgroundScript('pageLoad', {
+        url: window.location.href,
+        title: document.title,
+        timestamp: Date.now()
+    });
 }
 
 /**
- * Set up event listeners for page changes
+ * Set up event listeners for page activity
  */
 function setupEventListeners() {
-    // Handle SPA navigation (URL changes without page reload)
-    let lastUrl = location.href;
-    
-    // Monitor URL changes
-    new MutationObserver(() => {
-        const currentUrl = location.href;
-        if (currentUrl !== lastUrl) {
-            lastUrl = currentUrl;
-            handleUrlChange(currentUrl);
-        }
-    }).observe(document, { subtree: true, childList: true });
-    
-    // Handle page visibility changes
+    // Track page visibility changes
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Handle page unload
-    window.addEventListener('beforeunload', handlePageUnload);
-}
-
-/**
- * Handle URL changes in SPA applications
- * @param {string} newUrl - New URL
- */
-function handleUrlChange(newUrl) {
-    console.log('URL changed to:', newUrl);
+    // Track page focus/blur
+    window.addEventListener('focus', handlePageFocus);
+    window.addEventListener('blur', handlePageBlur);
     
-    // Send message to background script about URL change
-    chrome.runtime.sendMessage({
-        type: 'URL_CHANGED',
-        url: newUrl,
-        timestamp: Date.now()
-    }).catch(error => {
-        console.error('Error sending URL change message:', error);
-    });
+    // Track mouse movement (as activity indicator)
+    document.addEventListener('mousemove', throttle(handleUserActivity, 5000));
+    
+    // Track keyboard activity
+    document.addEventListener('keydown', throttle(handleUserActivity, 5000));
+    
+    // Track scroll activity
+    window.addEventListener('scroll', throttle(handleUserActivity, 10000));
 }
 
 /**
@@ -63,156 +78,113 @@ function handleUrlChange(newUrl) {
  */
 function handleVisibilityChange() {
     const isVisible = !document.hidden;
-    
-    chrome.runtime.sendMessage({
-        type: 'VISIBILITY_CHANGED',
-        isVisible,
+    notifyBackgroundScript('visibilityChange', {
+        visible: isVisible,
+        url: window.location.href,
         timestamp: Date.now()
-    }).catch(error => {
-        console.error('Error sending visibility change message:', error);
     });
 }
 
 /**
- * Handle page unload
+ * Handle page focus
  */
-function handlePageUnload() {
-    chrome.runtime.sendMessage({
-        type: 'PAGE_UNLOAD',
+function handlePageFocus() {
+    notifyBackgroundScript('pageFocus', {
+        url: window.location.href,
         timestamp: Date.now()
-    }).catch(error => {
-        console.error('Error sending page unload message:', error);
     });
 }
 
 /**
- * Collect metadata about the current page
+ * Handle page blur
  */
-function collectPageMetadata() {
-    const metadata = {
-        title: document.title,
-        url: location.href,
-        domain: location.hostname,
-        timestamp: Date.now(),
-        userAgent: navigator.userAgent,
-        referrer: document.referrer
-    };
-    
-    // Try to determine page type/category
-    metadata.category = determinePageCategory(metadata);
-    
-    // Send metadata to background script
-    chrome.runtime.sendMessage({
-        type: 'PAGE_METADATA',
-        metadata
-    }).catch(error => {
-        console.error('Error sending page metadata:', error);
+function handlePageBlur() {
+    notifyBackgroundScript('pageBlur', {
+        url: window.location.href,
+        timestamp: Date.now()
     });
 }
 
 /**
- * Determine page category based on URL and content
- * @param {Object} metadata - Page metadata
- * @returns {string} Page category
+ * Handle user activity
  */
-function determinePageCategory(metadata) {
-    const url = metadata.url.toLowerCase();
-    const title = metadata.title.toLowerCase();
-    
-    // Work-related sites
-    if (url.includes('github.com') || url.includes('stackoverflow.com') || 
-        url.includes('linkedin.com') || url.includes('slack.com') ||
-        title.includes('work') || title.includes('project')) {
-        return 'work';
-    }
-    
-    // Entertainment sites
-    if (url.includes('youtube.com') || url.includes('netflix.com') || 
-        url.includes('twitch.tv') || url.includes('spotify.com') ||
-        title.includes('video') || title.includes('music')) {
-        return 'entertainment';
-    }
-    
-    // Social media
-    if (url.includes('facebook.com') || url.includes('twitter.com') || 
-        url.includes('instagram.com') || url.includes('tiktok.com') ||
-        title.includes('social')) {
-        return 'social';
-    }
-    
-    // News and information
-    if (url.includes('news') || url.includes('cnn.com') || 
-        url.includes('bbc.com') || url.includes('reddit.com') ||
-        title.includes('news') || title.includes('article')) {
-        return 'news';
-    }
-    
-    // Shopping
-    if (url.includes('amazon.com') || url.includes('shop') || 
-        url.includes('buy') || title.includes('shop')) {
-        return 'shopping';
-    }
-    
-    return 'other';
+function handleUserActivity() {
+    notifyBackgroundScript('userActivity', {
+        url: window.location.href,
+        timestamp: Date.now()
+    });
 }
 
 /**
- * Get page performance metrics
- * @returns {Object} Performance metrics
+ * Throttle function to limit event frequency
  */
-function getPerformanceMetrics() {
-    if (!window.performance || !window.performance.timing) {
-        return null;
-    }
-    
-    const timing = window.performance.timing;
-    const navigation = window.performance.navigation;
-    
-    return {
-        loadTime: timing.loadEventEnd - timing.navigationStart,
-        domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-        firstPaint: timing.responseEnd - timing.navigationStart,
-        navigationType: navigation.type
-    };
-}
-
-/**
- * Monitor page performance and send metrics
- */
-function monitorPerformance() {
-    // Wait for page to load
-    if (document.readyState === 'complete') {
-        const metrics = getPerformanceMetrics();
-        if (metrics) {
-            chrome.runtime.sendMessage({
-                type: 'PERFORMANCE_METRICS',
-                metrics,
-                timestamp: Date.now()
-            }).catch(error => {
-                console.error('Error sending performance metrics:', error);
-            });
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
         }
-    } else {
-        // Wait for page to complete loading
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const metrics = getPerformanceMetrics();
-                if (metrics) {
-                    chrome.runtime.sendMessage({
-                        type: 'PERFORMANCE_METRICS',
-                        metrics,
-                        timestamp: Date.now()
-                    }).catch(error => {
-                        console.error('Error sending performance metrics:', error);
-                    });
+    };
+}
+
+/**
+ * Send message to background script
+ */
+function notifyBackgroundScript(type, data) {
+    try {
+        // Double-check Chrome API availability
+        if (!window.chrome || !window.chrome.runtime || !window.chrome.runtime.sendMessage) {
+            console.debug('Chrome runtime sendMessage not available');
+            return;
+        }
+        
+        window.chrome.runtime.sendMessage({
+            type: type,
+            data: data
+        }).catch(error => {
+            // Ignore errors when background script is not available
+            console.debug('Background script not available:', error.message);
+        });
+    } catch (error) {
+        console.debug('Error sending message to background:', error.message);
+    }
+}
+
+/**
+ * Handle messages from background script
+ */
+try {
+    if (window.chrome && window.chrome.runtime && window.chrome.runtime.onMessage) {
+        window.chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            try {
+                switch (request.type) {
+                    case 'getPageInfo':
+                        sendResponse({
+                            url: window.location.href,
+                            title: document.title,
+                            timestamp: Date.now()
+                        });
+                        break;
+                        
+                    case 'ping':
+                        sendResponse({ status: 'ok' });
+                        break;
+                        
+                    default:
+                        console.log('Unknown message type:', request.type);
                 }
-            }, 1000); // Wait 1 second after load
+            } catch (error) {
+                console.error('Error handling message:', error);
+                sendResponse({ error: error.message });
+            }
+            
+            return true; // Keep message channel open for async response
         });
     }
+} catch (error) {
+    console.debug('Chrome runtime not available for message listener:', error.message);
 }
-
-// Initialize content script
-initializeContentScript();
-
-// Monitor performance
-monitorPerformance();
