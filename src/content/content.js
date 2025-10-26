@@ -5,6 +5,36 @@
  * and send data to background script.
  */
 
+// Wrap everything in a try-catch to prevent any errors
+try {
+    // Early exit if Chrome API is not available
+    (function() {
+        'use strict';
+        
+        // Check if we're in a valid environment for Chrome extension
+        if (typeof window === 'undefined' || !window.chrome || !window.chrome.runtime) {
+            console.debug('Chrome extension environment not available, skipping content script');
+            return;
+        }
+        
+        // Check if we're on a valid page
+        const url = window.location.href;
+        if (url.startsWith('chrome://') || 
+            url.startsWith('chrome-extension://') || 
+            url.startsWith('moz-extension://') ||
+            url.startsWith('edge://') ||
+            url.startsWith('about:')) {
+            console.debug('Skipping content script on special page:', url);
+            return;
+        }
+        
+        // If we get here, it's safe to initialize
+        initializeContentScript();
+    })();
+} catch (error) {
+    console.debug('Content script error (safe to ignore):', error.message);
+}
+
 /**
  * Initialize content script
  */
@@ -106,7 +136,13 @@ function throttle(func, limit) {
  */
 function notifyBackgroundScript(type, data) {
     try {
-        chrome.runtime.sendMessage({
+        // Double-check Chrome API availability
+        if (!window.chrome || !window.chrome.runtime || !window.chrome.runtime.sendMessage) {
+            console.debug('Chrome runtime sendMessage not available');
+            return;
+        }
+        
+        window.chrome.runtime.sendMessage({
             type: type,
             data: data
         }).catch(error => {
@@ -121,31 +157,34 @@ function notifyBackgroundScript(type, data) {
 /**
  * Handle messages from background script
  */
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    try {
-        switch (request.type) {
-            case 'getPageInfo':
-                sendResponse({
-                    url: window.location.href,
-                    title: document.title,
-                    timestamp: Date.now()
-                });
-                break;
-                
-            case 'ping':
-                sendResponse({ status: 'ok' });
-                break;
-                
-            default:
-                console.log('Unknown message type:', request.type);
-        }
-    } catch (error) {
-        console.error('Error handling message:', error);
-        sendResponse({ error: error.message });
+try {
+    if (window.chrome && window.chrome.runtime && window.chrome.runtime.onMessage) {
+        window.chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            try {
+                switch (request.type) {
+                    case 'getPageInfo':
+                        sendResponse({
+                            url: window.location.href,
+                            title: document.title,
+                            timestamp: Date.now()
+                        });
+                        break;
+                        
+                    case 'ping':
+                        sendResponse({ status: 'ok' });
+                        break;
+                        
+                    default:
+                        console.log('Unknown message type:', request.type);
+                }
+            } catch (error) {
+                console.error('Error handling message:', error);
+                sendResponse({ error: error.message });
+            }
+            
+            return true; // Keep message channel open for async response
+        });
     }
-    
-    return true; // Keep message channel open for async response
-});
-
-// Initialize content script
-initializeContentScript();
+} catch (error) {
+    console.debug('Chrome runtime not available for message listener:', error.message);
+}
