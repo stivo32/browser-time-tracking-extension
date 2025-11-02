@@ -1,7 +1,6 @@
 """Tests for database models."""
 
 from datetime import date, datetime, timedelta
-from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
@@ -229,7 +228,9 @@ async def test_session_unique_constraint(db_session: AsyncSession):
     )
     db_session.add(session2)
 
-    with pytest.raises(Exception):
+    from sqlalchemy.exc import IntegrityError
+
+    with pytest.raises(IntegrityError):
         await db_session.commit()
 
 
@@ -262,6 +263,7 @@ async def test_auth_session_unique_token(db_session: AsyncSession):
     )
     db_session.add(auth_session2)
 
-    with pytest.raises(Exception):
-        await db_session.commit()
+    from sqlalchemy.exc import IntegrityError
 
+    with pytest.raises(IntegrityError):
+        await db_session.commit()

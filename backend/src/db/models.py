@@ -1,12 +1,12 @@
 """SQLAlchemy models for the application."""
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from uuid import uuid4
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.types import TypeDecorator, CHAR
+from sqlalchemy.types import CHAR, TypeDecorator
 
 from src.db.base import Base
 
@@ -53,9 +53,12 @@ class User(Base):
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     auth_sessions: Mapped[list["AuthSession"]] = relationship(
@@ -78,8 +81,8 @@ class AuthSession(Base):
     user_id: Mapped[str] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     session_token: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    last_used_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="auth_sessions")
 
@@ -100,19 +103,18 @@ class Session(Base):
     id: Mapped[str] = mapped_column(GUID(), primary_key=True, default=uuid4)
     user_id: Mapped[str] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     user: Mapped["User"] = relationship("User", back_populates="tracking_sessions")
-    domains: Mapped[list["Domain"]] = relationship(
-        "Domain", back_populates="session", cascade="all, delete-orphan"
-    )
+    domains: Mapped[list["Domain"]] = relationship("Domain", back_populates="session", cascade="all, delete-orphan")
 
-    __table_args__ = (
-        Index("idx_session_user_date", "user_id", "date", unique=True),
-    )
+    __table_args__ = (Index("idx_session_user_date", "user_id", "date", unique=True),)
 
     def __repr__(self) -> str:
         return f"<Session(id={self.id}, user_id={self.user_id}, date={self.date})>"
@@ -125,21 +127,27 @@ class Domain(Base):
 
     id: Mapped[str] = mapped_column(GUID(), primary_key=True, default=uuid4)
     user_id: Mapped[str] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    session_id: Mapped[str] = mapped_column(GUID(), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(
+        GUID(),
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     domain: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     total_time: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     custom_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     user: Mapped["User"] = relationship("User")
     session: Mapped["Session"] = relationship("Session", back_populates="domains")
-    pages: Mapped[list["Page"]] = relationship(
-        "Page", back_populates="domain", cascade="all, delete-orphan"
-    )
+    pages: Mapped[list["Page"]] = relationship("Page", back_populates="domain", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_domain_user", "user_id"),
@@ -157,21 +165,23 @@ class Page(Base):
     __tablename__ = "pages"
 
     id: Mapped[str] = mapped_column(GUID(), primary_key=True, default=uuid4)
-    domain_id: Mapped[str] = mapped_column(GUID(), ForeignKey("domains.id", ondelete="CASCADE"), nullable=False, index=True)
+    domain_id: Mapped[str] = mapped_column(
+        GUID(), ForeignKey("domains.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     url: Mapped[str] = mapped_column(Text, nullable=False)
     time: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     domain: Mapped["Domain"] = relationship("Domain", back_populates="pages")
 
-    __table_args__ = (
-        Index("idx_page_domain", "domain_id"),
-    )
+    __table_args__ = (Index("idx_page_domain", "domain_id"),)
 
     def __repr__(self) -> str:
         return f"<Page(id={self.id}, url={self.url[:50]}, time={self.time})>"
-

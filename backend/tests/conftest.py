@@ -1,11 +1,10 @@
 """Pytest configuration and fixtures."""
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from src.db.base import Base
-from src.db.models import AuthSession, Domain, Page, Session, User
 
 
 @pytest.fixture
@@ -41,4 +40,3 @@ async def db_session(db_engine):
     async with async_session_maker() as session:
         yield session
         await session.rollback()
-
