@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import User
 from src.schemas.auth import LoginRequest, RegisterRequest
-from src.schemas.user import UserResponse
-from src.services import session_auth, user as user_service
+from src.services import session_auth
+from src.services import user as user_service
 from src.utils.security import verify_password
 
 
