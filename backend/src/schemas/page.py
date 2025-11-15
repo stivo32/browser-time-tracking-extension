@@ -38,3 +38,4 @@ class PageResponse(PageBase):
 
     class Config:
         from_attributes = True
+

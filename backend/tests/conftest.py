@@ -40,3 +40,4 @@ async def db_session(db_engine):
     async with async_session_maker() as session:
         yield session
         await session.rollback()
+

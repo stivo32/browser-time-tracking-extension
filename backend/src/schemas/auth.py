@@ -43,7 +43,6 @@ class AuthResponse(BaseModel):
 
 def _rebuild_auth_response() -> None:
     """Rebuild AuthResponse model after UserResponse is defined.
-
     This is needed because AuthResponse uses forward reference "UserResponse",
     and model_rebuild() must be called after UserResponse is imported to resolve it.
     """
