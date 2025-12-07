@@ -93,22 +93,20 @@ async def test_login_endpoint_invalid_credentials(test_client: AsyncClient, test
 
 
 @pytest.mark.asyncio
-async def test_get_me_endpoint(test_client: AsyncClient, test_user: User):
+async def test_get_me_endpoint(test_client: AsyncClient, test_user: User, db_session: AsyncSession):
     """Test GET /api/v1/auth/me."""
     from src.services import session_auth
 
-    db_session = test_client.app.dependency_overrides.get("get_db")
-    if db_session:
-        auth_session = await session_auth.create_auth_session(db_session(), test_user)
+    auth_session = await session_auth.create_auth_session(db_session, test_user)
 
-        response = await test_client.get(
-            "/api/v1/auth/me",
-            headers={"X-Session-Token": auth_session.session_token},
-        )
+    response = await test_client.get(
+        "/api/v1/auth/me",
+        headers={"X-Session-Token": auth_session.session_token},
+    )
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["email"] == "test@example.com"
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "test@example.com"
 
 
 @pytest.mark.asyncio
@@ -120,19 +118,17 @@ async def test_get_me_endpoint_unauthorized(test_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_users_me_endpoint(test_client: AsyncClient, test_user: User):
+async def test_get_users_me_endpoint(test_client: AsyncClient, test_user: User, db_session: AsyncSession):
     """Test GET /api/v1/users/me."""
     from src.services import session_auth
 
-    db = test_client.app.dependency_overrides.get("get_db")
-    if db:
-        auth_session = await session_auth.create_auth_session(db(), test_user)
+    auth_session = await session_auth.create_auth_session(db_session, test_user)
 
-        response = await test_client.get(
-            "/api/v1/users/me",
-            headers={"X-Session-Token": auth_session.session_token},
-        )
+    response = await test_client.get(
+        "/api/v1/users/me",
+        headers={"X-Session-Token": auth_session.session_token},
+    )
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["email"] == "test@example.com"
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == "test@example.com"

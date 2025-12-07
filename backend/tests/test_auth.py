@@ -56,7 +56,7 @@ async def test_login_user(db_session: AsyncSession):
     login_data = LoginRequest(email="test@example.com", password="password123")
     user_result, session_token = await auth_service.login_user(db_session, login_data)
 
-    assert user_result.id == user.id
+    assert str(user_result.id) == str(user.id)
     assert session_token is not None
 
 
@@ -111,7 +111,7 @@ async def test_get_current_user(db_session: AsyncSession):
     current_user = await auth_service.get_current_user(db_session, auth_session.session_token)
 
     assert current_user is not None
-    assert current_user.id == user.id
+    assert str(current_user.id) == str(user.id)
 
 
 @pytest.mark.asyncio

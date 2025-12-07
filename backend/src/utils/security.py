@@ -3,11 +3,9 @@
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from passlib.context import CryptContext
+import bcrypt
 
 from src.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
@@ -19,7 +17,10 @@ def hash_password(password: str) -> str:
     Returns:
         Hashed password
     """
-    return pwd_context.hash(password)
+    password_bytes = password.encode("utf-8")
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -32,7 +33,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if password matches, False otherwise
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        password_bytes = plain_password.encode("utf-8")
+        hashed_bytes = hashed_password.encode("utf-8")
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
+    except Exception:
+        return False
 
 
 def generate_session_token() -> str:
@@ -67,4 +73,8 @@ def is_session_expired(expires_at: datetime) -> bool:
     Returns:
         True if session is expired, False otherwise
     """
-    return datetime.now(UTC) >= expires_at
+    now = datetime.now(UTC)
+    # Приводим expires_at к UTC если нужно
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    return now >= expires_at
