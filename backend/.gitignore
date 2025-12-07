@@ -43,6 +43,10 @@ dmypy.json
 # Environment
 .env
 .env.local
+.python-version
+
+# Docs/agents
+AGENTS.md
 
 # IDE
 .vscode/
