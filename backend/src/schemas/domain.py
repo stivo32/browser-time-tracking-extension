@@ -68,4 +68,3 @@ class DomainStatsListResponse(BaseModel):
 
     items: list[DomainStats]
     total: int
-
