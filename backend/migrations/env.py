@@ -6,9 +6,14 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from logging.config import fileConfig
+
 from alembic import context
 from src.config import settings
 from src.db.base import Base
+
+# Import all models to ensure they are registered with Base.metadata
+from src.db.models import AuthSession, Domain, Page, Session, User  # noqa: F401
 
 config = context.config
 
