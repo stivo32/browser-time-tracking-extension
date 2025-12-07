@@ -46,6 +46,10 @@ coverage/
 .env.development.local
 .env.test.local
 .env.production.local
+.python-version
+
+# Agents/docs
+**/AGENTS.md
 
 # Database
 *.db

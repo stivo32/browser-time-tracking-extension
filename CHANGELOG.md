@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Added - Phase 2: Backend API ✅ Completed
+- Backend API with FastAPI (Python 3.12)
+- Session-based authentication system
+- User registration and login endpoints (`POST /api/v1/auth/register`, `POST /api/v1/auth/login`)
+- User profile management (`GET /api/v1/users/me`, `PATCH /api/v1/users/me`, `DELETE /api/v1/users/me`)
+- REST API for time tracking sessions (`GET /api/v1/sessions`, `POST /api/v1/sessions`, etc.)
+- REST API for domains (`GET /api/v1/domains`, `GET /api/v1/domains/stats`, etc.)
+- Database models (User, AuthSession, Session, Domain, Page)
+- Pydantic schemas for API validation
+- Docker support for development
+- Comprehensive test suite: 21 tests passing, 71% code coverage
+- Alembic migrations support (initial migration created)
+- `.env.example` for environment configuration
+- Direct bcrypt integration (replaced passlib for compatibility)
+
+### Added - Phase 1: Browser Extension
 - Initial project structure with browser extension and cloud backend separation
 - Chrome Extension Manifest v3 configuration
 - Vite build system with React support
