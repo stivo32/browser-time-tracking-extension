@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Time Tracking</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div id="root">
+        <div class="popup-container">
+            <header class="popup-header">
+                <h1>Time Tracker</h1>
+                <div class="status-indicator" id="status-indicator">
+                    <span class="status-dot active"></span>
+                    <span class="status-text">Tracking</span>
+                </div>
+            </header>
+            
+            <main class="popup-main">
+                <div class="stats-section">
+                    <div class="stat-card">
+                        <h3>Today</h3>
+                        <div class="stat-value" id="today-time">0h 0m</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Sites</h3>
+                        <div class="stat-value" id="active-sites">0</div>
+                    </div>
+                </div>
+                
+                <div class="quick-stats" id="quick-stats">
+                    <p>No data yet. Start browsing to see your time tracking!</p>
+                </div>
+            </main>
+            
+            <footer class="popup-footer">
+                <button id="view-details" class="btn btn-primary">View Details</button>
+                <button id="open-settings" class="btn btn-secondary">Settings</button>
+            </footer>
+        </div>
+    </div>
+    
+    <script type="module" src="popup.js"></script>
+</body>
+</html>
