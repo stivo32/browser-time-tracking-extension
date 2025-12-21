@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: browser-stats-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/venv
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/app.db
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - SESSION_EXPIRE_DAYS=30
+      - PASSWORD_MIN_LENGTH=8
+      - API_V1_PREFIX=/api/v1
+      - ENVIRONMENT=development
+      - DEBUG=true
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+

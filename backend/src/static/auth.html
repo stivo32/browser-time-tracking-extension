@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Time Tracking - Authentication</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 450px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #6c757d;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success.show {
+            display: block;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        .extension-note {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #6c757d;
+            text-align: center;
+        }
+
+        .extension-note strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>⏱️ Browser Time Tracking</h1>
+            <p>Sign in to sync your data</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="login">Login</button>
+            <button class="tab" data-tab="register">Register</button>
+        </div>
+
+        <div class="error" id="error"></div>
+        <div class="success" id="success"></div>
+
+        <!-- Login Form -->
+        <div class="form-section active" id="login-section">
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn" id="login-btn">Sign In</button>
+            </form>
+        </div>
+
+        <!-- Register Form -->
+        <div class="form-section" id="register-section">
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" required autocomplete="new-password" minlength="8">
+                    <small>Minimum 8 characters</small>
+                </div>
+                <div class="form-group">
+                    <label for="register-name">Full Name (optional)</label>
+                    <input type="text" id="register-name" autocomplete="name">
+                </div>
+                <button type="submit" class="btn" id="register-btn">Create Account</button>
+            </form>
+        </div>
+
+        <div class="extension-note">
+            <strong>Extension User?</strong> After signing in, return to the extension to sync your data.
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        const API_V1_PREFIX = '/api/v1';
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                
+                // Update tabs
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Update forms
+                document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(`${targetTab}-section`).classList.add('active');
+                
+                // Clear messages
+                hideMessages();
+            });
+        });
+
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            document.getElementById('success').classList.remove('show');
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('success');
+            successEl.textContent = message;
+            successEl.classList.add('show');
+            document.getElementById('error').classList.remove('show');
+        }
+
+        function hideMessages() {
+            document.getElementById('error').classList.remove('show');
+            document.getElementById('success').classList.remove('show');
+        }
+
+        function setLoading(formId, loading) {
+            const btn = document.querySelector(`#${formId} .btn`);
+            btn.disabled = loading;
+            btn.textContent = loading ? 'Please wait...' : (formId === 'login-form' ? 'Sign In' : 'Create Account');
+        }
+
+        // Login form
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMessages();
+            setLoading('login-form', true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('login-email').value,
+                        password: document.getElementById('login-password').value,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Login failed');
+                }
+
+                // Store session token
+                if (data.session && data.session.session_token) {
+                    localStorage.setItem('session_token', data.session.session_token);
+                    
+                    // If opened from extension, send message
+                    if (window.opener && window.opener !== window) {
+                        window.opener.postMessage({
+                            type: 'AUTH_SUCCESS',
+                            session_token: data.session.session_token,
+                            user: data.user,
+                        }, '*');
+                        showSuccess('Login successful! Returning to extension...');
+                        setTimeout(() => window.close(), 1500);
+                    } else {
+                        showSuccess(`Welcome back, ${data.user.email}!`);
+                    }
+                }
+            } catch (error) {
+                showError(error.message || 'Login failed. Please check your credentials.');
+            } finally {
+                setLoading('login-form', false);
+            }
+        });
+
+        // Register form
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMessages();
+            setLoading('register-form', true);
+
+            try {
+                const registerData = {
+                    email: document.getElementById('register-email').value,
+                    password: document.getElementById('register-password').value,
+                };
+
+                const fullName = document.getElementById('register-name').value.trim();
+                if (fullName) {
+                    registerData.full_name = fullName;
+                }
+
+                const response = await fetch(`${API_BASE_URL}${API_V1_PREFIX}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(registerData),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Registration failed');
+                }
+
+                // Store session token
+                if (data.session && data.session.session_token) {
+                    localStorage.setItem('session_token', data.session.session_token);
+                    
+                    // If opened from extension, send message
+                    if (window.opener && window.opener !== window) {
+                        window.opener.postMessage({
+                            type: 'AUTH_SUCCESS',
+                            session_token: data.session.session_token,
+                            user: data.user,
+                        }, '*');
+                        showSuccess('Registration successful! Returning to extension...');
+                        setTimeout(() => window.close(), 1500);
+                    } else {
+                        showSuccess(`Account created! Welcome, ${data.user.email}!`);
+                        // Switch to login tab
+                        setTimeout(() => {
+                            document.querySelector('.tab[data-tab="login"]').click();
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                showError(error.message || 'Registration failed. Please try again.');
+            } finally {
+                setLoading('register-form', false);
+            }
+        });
+
+        // Check if we have a session token
+        const sessionToken = localStorage.getItem('session_token');
+        if (sessionToken) {
+            // Verify token is still valid
+            fetch(`${API_BASE_URL}${API_V1_PREFIX}/auth/me`, {
+                headers: {
+                    'X-Session-Token': sessionToken,
+                },
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.email) {
+                    showSuccess(`Already logged in as ${data.email}`);
+                }
+            })
+            .catch(() => {
+                localStorage.removeItem('session_token');
+            });
+        }
+    </script>
+</body>
+</html>
