@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./app.db"
 
     # Security
-    secret_key: str
+    secret_key: str = "dev-secret-key-change-in-production"
     session_expire_days: int = 30
     password_min_length: int = 8
 

@@ -26,6 +26,31 @@
                 </section>
                 
                 <section class="settings-section">
+                    <h2>Cloud Sync</h2>
+                    <div class="setting-item">
+                        <label>
+                            API URL:
+                            <input type="text" id="api-url" placeholder="http://localhost:8000" style="width: 100%; padding: 8px; margin-top: 5px;">
+                        </label>
+                        <small>Backend API address for cloud sync</small>
+                    </div>
+                    <div class="setting-item">
+                        <div id="auth-status" style="margin-bottom: 15px;">
+                            <p id="auth-status-text">Not connected</p>
+                        </div>
+                        <button id="auth-button" class="btn btn-primary">Sign In / Register</button>
+                        <button id="sync-button" class="btn btn-secondary" style="display: none;">Sync Now</button>
+                        <button id="logout-button" class="btn btn-danger" style="display: none;">Sign Out</button>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="auto-sync">
+                            Auto-sync data
+                        </label>
+                    </div>
+                </section>
+                
+                <section class="settings-section">
                     <h2>Data Management</h2>
                     <div class="setting-item">
                         <button id="export-data" class="btn btn-primary">Export Data</button>

@@ -55,6 +55,7 @@ coverage/
 *.db
 *.sqlite
 *.sqlite3
+backend/data/
 
 # Temporary files
 *.tmp

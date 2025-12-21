@@ -31,6 +31,30 @@ function setupEventListeners() {
         trackingCheckbox.addEventListener('change', handleTrackingToggle);
     }
     
+    // Auth button
+    const authBtn = document.getElementById('auth-button');
+    if (authBtn) {
+        authBtn.addEventListener('click', handleAuthClick);
+    }
+    
+    // Sync button
+    const syncBtn = document.getElementById('sync-button');
+    if (syncBtn) {
+        syncBtn.addEventListener('click', handleSyncClick);
+    }
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logout-button');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogoutClick);
+    }
+    
+    // Auto-sync checkbox
+    const autoSyncCheckbox = document.getElementById('auto-sync');
+    if (autoSyncCheckbox) {
+        autoSyncCheckbox.addEventListener('change', handleAutoSyncToggle);
+    }
+    
     // Export data button
     const exportBtn = document.getElementById('export-data');
     if (exportBtn) {
@@ -42,6 +66,9 @@ function setupEventListeners() {
     if (clearBtn) {
         clearBtn.addEventListener('click', handleClearData);
     }
+    
+    // Listen for auth success message from auth page
+    window.addEventListener('message', handleAuthMessage);
 }
 
 /**
@@ -49,7 +76,7 @@ function setupEventListeners() {
  */
 async function loadSettings() {
     try {
-        const result = await chrome.storage.local.get(['settings']);
+        const result = await chrome.storage.local.get(['settings', 'session_token', 'user']);
         const settings = result.settings || {};
         
         const trackingCheckbox = document.getElementById('tracking-enabled');
@@ -57,8 +84,204 @@ async function loadSettings() {
             trackingCheckbox.checked = settings.trackingEnabled !== false; // Default to true
         }
         
+        const autoSyncCheckbox = document.getElementById('auto-sync');
+        if (autoSyncCheckbox) {
+            autoSyncCheckbox.checked = settings.autoSync === true;
+        }
+        
+        // API URL
+        const apiUrlInput = document.getElementById('api-url');
+        if (apiUrlInput) {
+            apiUrlInput.value = result.api_url || 'http://localhost:8000';
+            apiUrlInput.addEventListener('change', handleApiUrlChange);
+        }
+        
+        // Update auth status
+        updateAuthStatus(result.session_token, result.user);
+        
     } catch (error) {
         console.error('Error loading settings:', error);
+    }
+}
+
+/**
+ * Update authentication status UI
+ */
+function updateAuthStatus(sessionToken, user) {
+    const authStatusText = document.getElementById('auth-status-text');
+    const authButton = document.getElementById('auth-button');
+    const syncButton = document.getElementById('sync-button');
+    const logoutButton = document.getElementById('logout-button');
+    
+    if (sessionToken && user) {
+        authStatusText.textContent = `Connected as ${user.email}`;
+        authStatusText.style.color = '#28a745';
+        authButton.style.display = 'none';
+        syncButton.style.display = 'inline-block';
+        logoutButton.style.display = 'inline-block';
+    } else {
+        authStatusText.textContent = 'Not connected';
+        authStatusText.style.color = '#6c757d';
+        authButton.style.display = 'inline-block';
+        syncButton.style.display = 'none';
+        logoutButton.style.display = 'none';
+    }
+}
+
+/**
+ * Handle auth button click - open auth page
+ */
+function handleAuthClick() {
+    // Get API URL from settings or use default
+    chrome.storage.local.get(['api_url'], (result) => {
+        const apiUrl = result.api_url || 'http://localhost:8000';
+        const authUrl = `${apiUrl}/static/auth.html`;
+        
+        // Open auth page in new window
+        chrome.windows.create({
+            url: authUrl,
+            type: 'popup',
+            width: 500,
+            height: 700,
+        });
+    });
+}
+
+/**
+ * Handle auth message from auth page
+ */
+function handleAuthMessage(event) {
+    // Security: only accept messages from our auth page
+    if (event.data && event.data.type === 'AUTH_SUCCESS') {
+        const { session_token, user } = event.data;
+        
+        // Store session token and user data
+        chrome.storage.local.set({
+            session_token: session_token,
+            user: user,
+        }, () => {
+            console.log('Session token stored');
+            updateAuthStatus(session_token, user);
+            
+            // Show success message
+            const authStatusText = document.getElementById('auth-status-text');
+            authStatusText.textContent = `Connected as ${user.email}`;
+            authStatusText.style.color = '#28a745';
+        });
+    }
+}
+
+/**
+ * Handle sync button click
+ */
+async function handleSyncClick() {
+    const syncButton = document.getElementById('sync-button');
+    syncButton.disabled = true;
+    syncButton.textContent = 'Syncing...';
+    
+    try {
+        // TODO: Implement sync logic
+        console.log('Syncing data with backend...');
+        
+        // Get session token
+        const result = await chrome.storage.local.get(['session_token']);
+        if (!result.session_token) {
+            throw new Error('Not authenticated');
+        }
+        
+        // Get local data
+        const localData = await chrome.storage.local.get(null);
+        const sessions = Object.keys(localData)
+            .filter(key => key.startsWith('session_'))
+            .reduce((acc, key) => {
+                acc[key] = localData[key];
+                return acc;
+            }, {});
+        
+        // TODO: Send to backend API
+        // For now, just show success
+        alert('Sync completed! (Not yet implemented)');
+        
+    } catch (error) {
+        console.error('Sync error:', error);
+        alert(`Sync failed: ${error.message}`);
+    } finally {
+        syncButton.disabled = false;
+        syncButton.textContent = 'Sync Now';
+    }
+}
+
+/**
+ * Handle logout button click
+ */
+async function handleLogoutClick() {
+    if (!confirm('Are you sure you want to sign out?')) {
+        return;
+    }
+    
+    try {
+        // Get session token
+        const result = await chrome.storage.local.get(['session_token', 'api_url']);
+        const sessionToken = result.session_token;
+        const apiUrl = result.api_url || 'http://localhost:8000';
+        
+        // Call logout API
+        if (sessionToken) {
+            try {
+                await fetch(`${apiUrl}/api/v1/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Session-Token': sessionToken,
+                    },
+                });
+            } catch (error) {
+                console.error('Logout API error:', error);
+                // Continue anyway to clear local data
+            }
+        }
+        
+        // Clear local session data
+        await chrome.storage.local.remove(['session_token', 'user']);
+        
+        // Update UI
+        updateAuthStatus(null, null);
+        
+        console.log('Logged out successfully');
+        
+    } catch (error) {
+        console.error('Logout error:', error);
+        alert('Error during logout');
+    }
+}
+
+/**
+ * Handle auto-sync toggle
+ */
+async function handleAutoSyncToggle(event) {
+    try {
+        const result = await chrome.storage.local.get(['settings']);
+        const settings = result.settings || {};
+        settings.autoSync = event.target.checked;
+        
+        await chrome.storage.local.set({ settings });
+        
+        console.log('Auto-sync:', event.target.checked);
+        
+    } catch (error) {
+        console.error('Error updating auto-sync setting:', error);
+    }
+}
+
+/**
+ * Handle API URL change
+ */
+async function handleApiUrlChange(event) {
+    try {
+        const apiUrl = event.target.value.trim();
+        await chrome.storage.local.set({ api_url: apiUrl });
+        console.log('API URL updated:', apiUrl);
+    } catch (error) {
+        console.error('Error updating API URL:', error);
     }
 }
 

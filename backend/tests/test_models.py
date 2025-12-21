@@ -265,7 +265,7 @@ async def test_auth_session_unique_token(db_session: AsyncSession):
     auth_session1 = AuthSession(
         user_id=user1.id,
         session_token="same_token",
-        expires_at=datetime.utcnow() + timedelta(days=30),
+        expires_at=datetime.now(UTC) + timedelta(days=30),
     )
     db_session.add(auth_session1)
     await db_session.commit()
@@ -273,7 +273,7 @@ async def test_auth_session_unique_token(db_session: AsyncSession):
     auth_session2 = AuthSession(
         user_id=user2.id,
         session_token="same_token",
-        expires_at=datetime.utcnow() + timedelta(days=30),
+        expires_at=datetime.now(UTC) + timedelta(days=30),
     )
     db_session.add(auth_session2)
 
